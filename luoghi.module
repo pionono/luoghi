@@ -1,0 +1,203 @@
+<?php // $Id$
+/**
+ * Module:      testahah
+ * Date:        2009-02-08  14:47
+ * Author:      marco
+ *
+ * Description:
+ *   description
+ *
+ * License:
+ *   
+ *   Copyright (C) 2009  marco
+ *
+ *   This program is free software: you can redistribute it and/or modify
+ *   it under the terms of the GNU General Public License as published by
+ *   the Free Software Foundation, either version 3 of the License, or
+ *   (at your option) any later version.
+ *
+ *   This program is distributed in the hope that it will be useful,
+ *   but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.pro See the
+ *   GNU General Public License for more details.
+ *
+ *   You should have received a copy of the GNU General Public License
+ *   along with this program. If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+/**
+ * Implementation of hook_menu().
+ */
+
+
+function luoghi_menu() {
+  $items = array();
+
+  $items['luoghi/crea_form'] = array(
+    'title'            => t('Form AHAH'),
+    'description'      => t('Test form to AHAH'),
+    'page callback'    => 'drupal_get_form',
+    'page arguments'   => array('testahah_form'),
+    'access arguments' => array('access content'),
+  );
+
+  $items['luoghi/province'] = array(
+    'title'            => t('JSON'),
+    'description'      => t('Prende le province'),
+    'page callback'    => 'province_js',
+    'access arguments' => array('access content'),
+    'type'             => MENU_CALLBACK,
+  );
+
+  $items['luoghi/comuni'] = array(
+    'title'            => t('JSON'),
+    'description'      => t('Prende i comuni'),
+    'page callback'    => 'comuni_js',
+    'access arguments' => array('access content'),
+    'type'             => MENU_CALLBACK,
+  );
+
+  return $items;
+}
+/**
+ * Geenrate base FORM.
+ */
+function luoghi_form() {
+	$sql = "SELECT regione_id, regione_nome FROM regioni ORDER BY regione_nome";
+	$prendi_regioni = db_query($sql);
+	while ($regioni = db_fetch_array($prendi_regioni)) {
+		$regions[] = $regioni;	
+	}
+
+	$options = array();
+	foreach ($regions as $regione) {
+		$options[$regione['regione_id']] = $regione['regione_nome'];
+	}
+
+
+  $form['regione'] = array(
+    '#type'          => 'select',
+    '#title'         => t('Regione'),
+    '#description'   => t(''),
+    '#weight'        => -4,   
+    '#options' => $options,
+    '#ahah'          => array(
+     'event' => 'change',
+     'path'    => 'luoghi/province',
+      'wrapper' => 'provincia',
+    ),
+  );
+  
+  $form['provincia'] = array(
+    '#type'          => 'select',
+    '#title'         => t('Provincia'),
+    '#description'   => t(''),
+    '#options'       => array(0 => 'Prima selezionare regione'),
+    '#prefix'        => '<div id="provincia">',
+    '#suffix'        => '</div>',
+    '#ahah'          => array(
+     'event' => 'change',
+     'path'    => 'luoghi/comuni',
+     'wrapper' => 'comune',
+    ),
+  );
+
+  $form['comune'] = array(
+    '#type'          => 'select',
+    '#title'         => t('Comune'),
+    '#description'   => t(''),
+    '#options'       => array(0 => 'Prima selezionare provincia'),
+    '#prefix'        => '<div id="comune">',
+    '#suffix'        => '</div>',
+  );
+  
+  return $form;
+}
+/**
+ * AJAX Callback function.
+ */
+function province_js() {
+  
+  $id = $_POST['regione'];
+
+  $sql = "SELECT provincia_id, provincia_nome FROM province WHERE regione_id = $id ORDER BY provincia_nome";
+	$prendi_province = db_query($sql);
+	while ($province = db_fetch_array($prendi_province)) {
+		$options[$province['provincia_id']]= $province['provincia_nome'];	
+	}  
+  
+  $form = array(
+    '#type'          => 'select',
+    '#title'         => t('Provincia'),
+    '#description'   => t(''),
+    '#options'       => $options,
+    '#prefix'        => '<div id="provincia">',
+    '#suffix'        => '</div>',
+    '#ahah'          => array(
+     'event' => 'change',
+     'path'    => 'luoghi/comuni',
+     'wrapper' => 'comune'),      
+  ); 
+  
+  $output = ahah_field_render($form, 'provincia');
+  print drupal_to_js(array('data' => $output, 'status' => true));
+
+  exit();
+}
+
+function comuni_js() {
+  
+  $id = $_POST['provincia'];
+	unset($options);
+  $sql = "SELECT provincia_id, comune_nome FROM comuni WHERE provincia_id = $id ORDER BY comune_nome";
+	$prendi_comuni = db_query($sql);
+	while ($comune = db_fetch_array($prendi_comuni)) {
+		$options[$comune['comune_nome']] = $comune['comune_nome'];	
+	} 
+  
+  $form = array(
+    '#type'          => 'select',
+    '#title'         => t('Comune'),
+    '#description'   => t(''),
+    '#options'       => $options,    
+  ); 
+
+  $output = ahah_field_render($form, 'comune');
+  print drupal_to_js(array('data' => $output, 'status' => true));
+
+  exit();
+}
+
+/**
+ * Cambia il form in cache al volo
+ */
+function ahah_field_render($fields, $name) {
+  // Cambia lo status del form
+  $form_state = array('submitted' => FALSE);
+  
+  // Recupera l'id del form
+  $form_build_id = $_POST['form_build_id'];
+  
+  // Recupera il form dalla cache
+  $form = form_get_cache($form_build_id, $form_state);
+  
+  // Sostituisce il field
+  $form[$name] = $fields;
+  
+  // Mette il form modificato in cache
+  form_set_cache($form_build_id, $form, $form_state);
+  
+  $form += array(
+    '#post' => $_POST,
+    '#programmed' => FALSE,
+  );
+  
+  // Rigenera il form
+  $form = form_builder($_POST['form_id'], $form, $form_state);
+  
+  // Estrae il field modificato
+  $new_form = $form[$name];
+  
+  // Renderizza e restituisce il field modificato
+  return drupal_render($new_form); 
+}

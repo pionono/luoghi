@@ -1,0 +1,6 @@
+; $Id$
+name = Luoghi
+description = Menu a tendina
+;package = mavimo
+version = 1.0
+core = 6.x	
