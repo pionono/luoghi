@@ -29,19 +29,35 @@
  * Implementation of hook_menu().
  */
 
+/*function luoghi_form_alter(&$form, $form_state, $form_id) {
+
+	if ($form_id == 'user register') {
+		drupal_set_title(t('Registrazione utente')); 
+	}
+
+	if ($form_id == 'profile_node_form') {
+		drupal_set_title(t('Registrazione utente'));
+	}
+
+	if ($form_id == 'user_pass') {
+		drupal_set_title(t('Recupero credenziali'));
+	}
+
+}*/
+/**************************************************/
 
 function luoghi_menu() {
   $items = array();
 
-  $items['luoghi/crea_form'] = array(
+  $items['user/register'] = array(
     'title'            => t('Form AHAH'),
     'description'      => t('Test form to AHAH'),
     'page callback'    => 'drupal_get_form',
-    'page arguments'   => array('testahah_form'),
+    'page arguments'   => array('user-register'),
     'access arguments' => array('access content'),
   );
 
-  $items['luoghi/province'] = array(
+  $items['user/register/province'] = array(
     'title'            => t('JSON'),
     'description'      => t('Prende le province'),
     'page callback'    => 'province_js',
@@ -49,7 +65,7 @@ function luoghi_menu() {
     'type'             => MENU_CALLBACK,
   );
 
-  $items['luoghi/comuni'] = array(
+  $items['user/register/comuni'] = array(
     'title'            => t('JSON'),
     'description'      => t('Prende i comuni'),
     'page callback'    => 'comuni_js',
@@ -62,20 +78,24 @@ function luoghi_menu() {
 /**
  * Geenrate base FORM.
  */
-function luoghi_form() {
+function luoghi_form_alter(&$form, $form_state, $form_id) {
+	echo $form_id;
+ if ($form_id == 'user_register') { 
+
+
 	$sql = "SELECT regione_id, regione_nome FROM regioni ORDER BY regione_nome";
 	$prendi_regioni = db_query($sql);
 	while ($regioni = db_fetch_array($prendi_regioni)) {
 		$regions[] = $regioni;	
 	}
-
+	
 	$options = array();
 	foreach ($regions as $regione) {
 		$options[$regione['regione_id']] = $regione['regione_nome'];
 	}
 
 
-  $form['regione'] = array(
+  $myform['regione'] = array(
     '#type'          => 'select',
     '#title'         => t('Regione'),
     '#description'   => t(''),
@@ -83,12 +103,12 @@ function luoghi_form() {
     '#options' => $options,
     '#ahah'          => array(
      'event' => 'change',
-     'path'    => 'luoghi/province',
+     'path'    => 'user/register/province',
       'wrapper' => 'provincia',
     ),
   );
   
-  $form['provincia'] = array(
+  $myform['provincia'] = array(
     '#type'          => 'select',
     '#title'         => t('Provincia'),
     '#description'   => t(''),
@@ -97,12 +117,12 @@ function luoghi_form() {
     '#suffix'        => '</div>',
     '#ahah'          => array(
      'event' => 'change',
-     'path'    => 'luoghi/comuni',
+     'path'    => 'user/register/comuni',
      'wrapper' => 'comune',
     ),
   );
 
-  $form['comune'] = array(
+  $myform['comune'] = array(
     '#type'          => 'select',
     '#title'         => t('Comune'),
     '#description'   => t(''),
@@ -111,12 +131,13 @@ function luoghi_form() {
     '#suffix'        => '</div>',
   );
   
-  return $form;
+  return $myform;
+  print_r($form);
 }
 /**
  * AJAX Callback function.
  */
-function province_js() {
+/*function province_js() {
   
   $id = $_POST['regione'];
 
@@ -135,7 +156,7 @@ function province_js() {
     '#suffix'        => '</div>',
     '#ahah'          => array(
      'event' => 'change',
-     'path'    => 'luoghi/comuni',
+     'path'    => 'user/register/comuni',
      'wrapper' => 'comune'),      
   ); 
   
@@ -143,9 +164,9 @@ function province_js() {
   print drupal_to_js(array('data' => $output, 'status' => true));
 
   exit();
-}
+}*/
 
-function comuni_js() {
+/*function comuni_js() {
   
   $id = $_POST['provincia'];
 	unset($options);
@@ -166,12 +187,12 @@ function comuni_js() {
   print drupal_to_js(array('data' => $output, 'status' => true));
 
   exit();
-}
+}*/
 
 /**
  * Cambia il form in cache al volo
  */
-function ahah_field_render($fields, $name) {
+/*function ahah_field_render($fields, $name) {
   // Cambia lo status del form
   $form_state = array('submitted' => FALSE);
   
@@ -200,4 +221,10 @@ function ahah_field_render($fields, $name) {
   
   // Renderizza e restituisce il field modificato
   return drupal_render($new_form); 
+}*/
+
+/**************************************************/
+
+
+//fine del form_alter
 }
